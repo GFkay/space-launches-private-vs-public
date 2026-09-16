@@ -1,0 +1,17 @@
+# Données brutes volumineuses — régénérées via scripts/01_collect_launch_library.py
+data/raw/
+data/interim/
+data/processed/
+
+# Environnement Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Notebooks — nettoyer les sorties avant commit si besoin
+.ipynb_checkpoints/
+
+# Divers
+.DS_Store
+*.log
