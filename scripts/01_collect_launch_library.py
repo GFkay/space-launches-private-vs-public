@@ -66,8 +66,19 @@ def fetch_page(endpoint_path: str, offset: int, limit: int = PAGE_SIZE) -> dict:
     url = f"{BASE_URL}{endpoint_path}"
     params = {"limit": limit, "offset": offset}
 
-    for attempt in range(1, 4):
-        response = requests.get(url, params=params, timeout=30)
+    max_attempts = 5
+    for attempt in range(1, max_attempts + 1):
+        try:
+            response = requests.get(url, params=params, timeout=60)
+        except requests.exceptions.RequestException as exc:
+            # Timeout, connexion coupée, DNS, wifi instable, etc. : on réessaie avec backoff
+            wait_seconds = min(30 * attempt, 180)
+            logger.warning(
+                "Erreur réseau (%s) — nouvelle tentative dans %ss (essai %s/%s)",
+                exc.__class__.__name__, wait_seconds, attempt, max_attempts,
+            )
+            time.sleep(wait_seconds)
+            continue
 
         if response.status_code == 200:
             return response.json()
@@ -76,26 +87,36 @@ def fetch_page(endpoint_path: str, offset: int, limit: int = PAGE_SIZE) -> dict:
             # Rate limit dépassé : on respecte l'en-tête Retry-After si présent
             retry_after = int(response.headers.get("Retry-After", 300))
             logger.warning(
-                "429 Too Many Requests — attente de %ss avant nouvelle tentative (essai %s/3)",
-                retry_after, attempt,
+                "429 Too Many Requests — attente de %ss avant nouvelle tentative (essai %s/%s)",
+                retry_after, attempt, max_attempts,
             )
             time.sleep(retry_after)
+            continue
+
+        if response.status_code >= 500:
+            # Erreur serveur temporaire : on réessaie aussi
+            wait_seconds = min(30 * attempt, 180)
+            logger.warning(
+                "Erreur serveur %s — nouvelle tentative dans %ss (essai %s/%s)",
+                response.status_code, wait_seconds, attempt, max_attempts,
+            )
+            time.sleep(wait_seconds)
             continue
 
         logger.error("Erreur HTTP %s pour %s (offset=%s)", response.status_code, url, offset)
         response.raise_for_status()
 
-    raise RuntimeError(f"Échec après 3 tentatives pour offset={offset} sur {endpoint_path}")
+    raise RuntimeError(f"Échec après {max_attempts} tentatives pour offset={offset} sur {endpoint_path}")
 
 
 def load_checkpoint(checkpoint_path: Path) -> dict:
     if checkpoint_path.exists():
-        return json.loads(checkpoint_path.read_text())
+        return json.loads(checkpoint_path.read_text(encoding="utf-8"))
     return {"next_offset": 0, "done": False, "total_count": None}
 
 
 def save_checkpoint(checkpoint_path: Path, checkpoint: dict) -> None:
-    checkpoint_path.write_text(json.dumps(checkpoint, indent=2))
+    checkpoint_path.write_text(json.dumps(checkpoint, indent=2), encoding="utf-8")
 
 
 def collect_endpoint(
@@ -140,7 +161,10 @@ def collect_endpoint(
             "limit": PAGE_SIZE,
             "raw_response": page,
         }
-        page_file.write_text(json.dumps(record, indent=2, ensure_ascii=False))
+        page_file.write_text(
+            json.dumps(record, indent=2, ensure_ascii=False),
+            encoding="utf-8",
+        )
 
         offset += PAGE_SIZE
         checkpoint["next_offset"] = offset
@@ -182,8 +206,15 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    for endpoint_name in args.endpoint:
-        collect_endpoint(endpoint_name, delay_seconds=args.delay, count_only=args.count_only)
+    try:
+        for endpoint_name in args.endpoint:
+            collect_endpoint(endpoint_name, delay_seconds=args.delay, count_only=args.count_only)
+    except (RuntimeError, KeyboardInterrupt) as exc:
+        logger.warning(
+            "Arrêt du script (%s). Aucune donnée perdue : relance exactement la même "
+            "commande pour reprendre automatiquement là où tu t'es arrêté.",
+            exc.__class__.__name__,
+        )
 
 
 if __name__ == "__main__":
