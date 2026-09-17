@@ -1,47 +1,47 @@
-# 🚀 Le privé a-t-il rendu l'espace plus accessible ?
+# 🚀 Has the private sector made space more accessible?
 
-Projet réalisé dans le cadre du cours **DALAS** (Data Science, Learning and ApplicationS) — Sorbonne Université.
+Project carried out as part of the **DALAS** course (Data Science, Learning and ApplicationS) — Sorbonne Université.
 
-## Question de recherche
+## Research question
 
-> Le secteur privé (SpaceX, Blue Origin, Rocket Lab...) a-t-il rendu l'accès à l'espace plus fiable et plus fréquent que les agences publiques historiques (NASA, Roscosmos, CNES...) ?
+> Has the private sector (SpaceX, Blue Origin, Rocket Lab...) made access to space more reliable and more frequent than historical public agencies (NASA, Roscosmos, CNES...)?
 
-## Sources de données
+## Data sources
 
-- **[Launch Library 2 API](https://ll.thespacedevs.com/)** — historique complet des lancements orbitaux (~6000 lancements), agences, sites de lancement, configurations de fusées
-- **Wikipédia** — enrichissement : coût par lancement (infobox des pages fusées), dates-repères (premiers atterrissages réussis, jalons technologiques)
+- **[Launch Library 2 API](https://ll.thespacedevs.com/)** — complete history of orbital launches (~8000 launches), agencies, launch sites, rocket configurations
+- **Wikipedia** — enrichment: cost per launch (rocket page infoboxes), key milestone dates (first successful landings, technological breakthroughs)
 
-## Avancement
+## Data pipeline
 
-- ✅ 01 — Collecte brute (API Launch Library 2) — 7977 lancements récupérés
-- ⬜ 02 — Fusion des sources (launches / agencies / pads / launcher_configs)
-- ⬜ 03 — Nettoyage
-- ⬜ 04 — Enrichissement externe (coûts, dates-repères)
-- ⬜ 05 — Calcul des métriques
-- ⬜ Dashboard (TME6)
-- ⬜ Rapport visuel + rapport technique (TME9)
-
-## Pipeline de données
-
-| Étape | Script | Description |
+| Step | Script | Description |
 |---|---|---|
-| 1 | `scripts/01_collect_launch_library.py` | Collecte brute via l'API (raw, jamais modifié) |
-| 2 | `scripts/02_merge_sources.py` | Fusion launches / agencies / pads / launcher_configs |
-| 3 | `scripts/03_clean.py` | Nettoyage (valeurs manquantes, statuts ambigus, doublons) |
-| 4 | `scripts/04_enrich_external.py` | Ajout coûts + dates-repères externes |
-| 5 | `scripts/05_compute_metrics.py` | Calcul des métriques maison (taux de succès, fréquence, réutilisation) |
+| 1 | `scripts/01_collect_launch_library.py` | Raw collection via the API (raw, never modified) |
+| 2 | `scripts/02_merge_sources.py` | Merge launches / agencies / pads / launcher_configs |
+| 3 | `scripts/03_clean.py` | Cleaning (missing values, ambiguous statuses, duplicates) |
+| 4 | `scripts/04_enrich_external.py` | Adding external costs + key milestone dates |
+| 5 | `scripts/05_compute_metrics.py` | Computing custom metrics (success rate, frequency, reuse) |
 
-Chaque étape lit la sortie de la précédente et écrit une nouvelle version — les données brutes ne sont jamais modifiées (`data/raw/` en lecture seule).
+Each step reads the output of the previous one and writes a new version — raw data is never modified (`data/raw/` is read-only).
 
-## Structure du projet
+## Progress
+
+- ✅ 01 — Raw collection (Launch Library 2 API) — 7977 launches retrieved
+- ⬜ 02 — Merging sources (launches / agencies / pads / launcher_configs)
+- ⬜ 03 — Cleaning
+- ⬜ 04 — External enrichment (costs, key milestone dates)
+- ⬜ 05 — Computing metrics
+- ⬜ Dashboard (TME6)
+- ⬜ Visual report + technical report (TME9)
+
+## Project structure
 
 ```
-data/          raw → interim → processed (voir pipeline ci-dessus)
-scripts/       un script par étape, exécutables dans l'ordre
-notebooks/     exploration (EDA), non destiné à la production
-dashboard/     application Streamlit (TME6)
-reports/       livrables du cours (TME4, rapport visuel, rapport technique)
-tests/         tests unitaires sur les fonctions de nettoyage/métriques
+data/          raw → interim → processed (see pipeline above)
+scripts/       one script per step, run in order
+notebooks/     exploration (EDA), not meant for production
+dashboard/     Streamlit app (TME6)
+reports/       course deliverables (TME4, visual report, technical report)
+tests/         unit tests on cleaning/metric functions
 ```
 
 ## Installation
@@ -50,7 +50,7 @@ tests/         tests unitaires sur les fonctions de nettoyage/métriques
 pip install -r requirements.txt
 ```
 
-## Reproduire le pipeline
+## Reproducing the pipeline
 
 ```bash
 python scripts/01_collect_launch_library.py --endpoint launches agencies pads launcher_configs
@@ -60,6 +60,6 @@ python scripts/04_enrich_external.py
 python scripts/05_compute_metrics.py
 ```
 
-## Auteur
+## Author
 
-Karim, Projet de groupe DALAS TME
+Karim, Group project — DALAS TME

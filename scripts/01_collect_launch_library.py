@@ -1,21 +1,21 @@
 """
-Script de collecte brute — API Launch Library 2 (thespacedevs.com)
+Raw collection script — Launch Library 2 API (thespacedevs.com)
 ====================================================================
 
-Étape 1 du pipeline de données (voir data pipeline du cours DALAS) :
-- Interroge l'API pour un ou plusieurs endpoints (launches, agencies, pads, launcher_configs)
-- Respecte la limite de 15 requêtes/heure (tier gratuit non-authentifié)
-- Sauvegarde CHAQUE page brute telle quelle (aucune transformation) dans data/raw/<endpoint>/
-- Reprend automatiquement là où il s'était arrêté en cas d'interruption (checkpoint)
-- Ne modifie jamais les fichiers déjà écrits : la donnée brute est en lecture seule
+Step 1 of the data pipeline (see the DALAS course data pipeline):
+- Queries the API for one or more endpoints (launches, agencies, pads, launcher_configs)
+- Respects the 15 requests/hour limit (free, unauthenticated tier)
+- Saves EVERY raw page as-is (no transformation) under data/raw/<endpoint>/
+- Automatically resumes where it left off after an interruption (checkpoint)
+- Never modifies files already written: raw data is read-only
 
-Usage :
-    python collect_launch_library.py --endpoint launches
-    python collect_launch_library.py --endpoint agencies pads launcher_configs
-    python collect_launch_library.py --endpoint launches --count-only   # juste connaître le volume, 1 seule requête
-    python collect_launch_library.py --endpoint launches --delay 5      # à utiliser seulement si vous avez une clé API avec un quota plus élevé
+Usage:
+    python 01_collect_launch_library.py --endpoint launches
+    python 01_collect_launch_library.py --endpoint agencies pads launcher_configs
+    python 01_collect_launch_library.py --endpoint launches --count-only   # just check the volume, 1 request
+    python 01_collect_launch_library.py --endpoint launches --delay 5      # only use if you have an API key with a higher quota
 
-Dépendances : requests (pip install requests)
+Dependencies: requests (pip install requests)
 """
 
 from __future__ import annotations
@@ -35,7 +35,7 @@ import requests
 
 BASE_URL = "https://ll.thespacedevs.com/2.0.0"
 
-# Nom logique -> chemin de l'endpoint sur l'API
+# Logical name -> API endpoint path
 ENDPOINTS: dict[str, str] = {
     "launches": "/launch/",
     "agencies": "/agencies/",
@@ -43,8 +43,8 @@ ENDPOINTS: dict[str, str] = {
     "launcher_configs": "/config/launcher/",
 }
 
-PAGE_SIZE = 100  # maximum autorisé par l'API
-# 15 requêtes/heure -> 1 requête toutes les 240s pour rester large sous la limite
+PAGE_SIZE = 100  # maximum allowed by the API
+# 15 requests/hour -> 1 request every 240s to stay comfortably under the limit
 DEFAULT_DELAY_SECONDS = 245
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data" / "raw"
@@ -58,23 +58,23 @@ logger = logging.getLogger(__name__)
 
 
 # --------------------------------------------------------------------------
-# Fonctions de collecte
+# Collection functions
 # --------------------------------------------------------------------------
 
 def fetch_page(endpoint_path: str, offset: int, limit: int = PAGE_SIZE) -> dict:
-    """Récupère une page de résultats depuis l'API, avec gestion des erreurs 429/5xx."""
+    """Fetch one page of results from the API, handling 429/5xx errors."""
     url = f"{BASE_URL}{endpoint_path}"
     params = {"limit": limit, "offset": offset}
 
-    max_attempts = 5
+    max_attempts = 6
     for attempt in range(1, max_attempts + 1):
         try:
             response = requests.get(url, params=params, timeout=60)
         except requests.exceptions.RequestException as exc:
-            # Timeout, connexion coupée, DNS, wifi instable, etc. : on réessaie avec backoff
+            # Timeout, dropped connection, DNS, unstable wifi, etc.: retry with backoff
             wait_seconds = min(30 * attempt, 180)
             logger.warning(
-                "Erreur réseau (%s) — nouvelle tentative dans %ss (essai %s/%s)",
+                "Network error (%s) — retrying in %ss (attempt %s/%s)",
                 exc.__class__.__name__, wait_seconds, attempt, max_attempts,
             )
             time.sleep(wait_seconds)
@@ -84,29 +84,33 @@ def fetch_page(endpoint_path: str, offset: int, limit: int = PAGE_SIZE) -> dict:
             return response.json()
 
         if response.status_code == 429:
-            # Rate limit dépassé : on respecte l'en-tête Retry-After si présent
-            retry_after = int(response.headers.get("Retry-After", 300))
+            # Rate limit exceeded. The Retry-After header the API returns is sometimes
+            # too optimistic (the hourly quota is genuinely exhausted, not just a brief
+            # spike): apply a progressive backoff that grows with each consecutive 429,
+            # up to a full hour if needed.
+            retry_after = int(response.headers.get("Retry-After", 60))
+            wait_seconds = min(max(retry_after, 60) * attempt, 3600)
             logger.warning(
-                "429 Too Many Requests — attente de %ss avant nouvelle tentative (essai %s/%s)",
-                retry_after, attempt, max_attempts,
+                "429 Too Many Requests — waiting %ss before retrying (attempt %s/%s)",
+                wait_seconds, attempt, max_attempts,
             )
-            time.sleep(retry_after)
+            time.sleep(wait_seconds)
             continue
 
         if response.status_code >= 500:
-            # Erreur serveur temporaire : on réessaie aussi
+            # Temporary server error: retry as well
             wait_seconds = min(30 * attempt, 180)
             logger.warning(
-                "Erreur serveur %s — nouvelle tentative dans %ss (essai %s/%s)",
+                "Server error %s — retrying in %ss (attempt %s/%s)",
                 response.status_code, wait_seconds, attempt, max_attempts,
             )
             time.sleep(wait_seconds)
             continue
 
-        logger.error("Erreur HTTP %s pour %s (offset=%s)", response.status_code, url, offset)
+        logger.error("HTTP error %s for %s (offset=%s)", response.status_code, url, offset)
         response.raise_for_status()
 
-    raise RuntimeError(f"Échec après {max_attempts} tentatives pour offset={offset} sur {endpoint_path}")
+    raise RuntimeError(f"Failed after {max_attempts} attempts for offset={offset} on {endpoint_path}")
 
 
 def load_checkpoint(checkpoint_path: Path) -> dict:
@@ -124,7 +128,7 @@ def collect_endpoint(
     delay_seconds: int = DEFAULT_DELAY_SECONDS,
     count_only: bool = False,
 ) -> None:
-    """Collecte l'intégralité d'un endpoint, page par page, avec reprise sur checkpoint."""
+    """Collect an entire endpoint, page by page, resuming from its checkpoint."""
     endpoint_path = ENDPOINTS[endpoint_name]
     output_dir = DATA_DIR / endpoint_name
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -133,26 +137,26 @@ def collect_endpoint(
     checkpoint = load_checkpoint(checkpoint_path)
 
     if checkpoint["done"] and not count_only:
-        logger.info("Endpoint '%s' déjà entièrement collecté (voir checkpoint). Rien à faire.", endpoint_name)
+        logger.info("Endpoint '%s' already fully collected (see checkpoint). Nothing to do.", endpoint_name)
         return
 
     offset = checkpoint["next_offset"]
     total_count = checkpoint["total_count"]
 
     while True:
-        logger.info("Collecte '%s' — offset=%s", endpoint_name, offset)
+        logger.info("Collecting '%s' — offset=%s", endpoint_name, offset)
         page = fetch_page(endpoint_path, offset)
 
         if total_count is None:
             total_count = page["count"]
             checkpoint["total_count"] = total_count
-            logger.info("Volume total détecté pour '%s' : %s éléments", endpoint_name, total_count)
+            logger.info("Total volume detected for '%s': %s items", endpoint_name, total_count)
 
         if count_only:
-            logger.info("Mode --count-only : arrêt après la première requête.")
+            logger.info("--count-only mode: stopping after the first request.")
             return
 
-        # Sauvegarde de la page brute, non modifiée, horodatée pour la reproductibilité
+        # Save the raw, unmodified page, timestamped for reproducibility
         page_file = output_dir / f"page_offset_{offset:06d}.json"
         record = {
             "collected_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -173,10 +177,10 @@ def collect_endpoint(
         if page["next"] is None:
             checkpoint["done"] = True
             save_checkpoint(checkpoint_path, checkpoint)
-            logger.info("Collecte de '%s' terminée : %s éléments récupérés.", endpoint_name, total_count)
+            logger.info("Collection of '%s' complete: %s items retrieved.", endpoint_name, total_count)
             break
 
-        logger.info("Pause de %ss avant la prochaine requête (limite API : 15/heure)...", delay_seconds)
+        logger.info("Pausing %ss before the next request (API limit: 15/hour)...", delay_seconds)
         time.sleep(delay_seconds)
 
 
@@ -185,24 +189,24 @@ def collect_endpoint(
 # --------------------------------------------------------------------------
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Collecte brute — API Launch Library 2")
+    parser = argparse.ArgumentParser(description="Raw collection — Launch Library 2 API")
     parser.add_argument(
         "--endpoint",
         nargs="+",
         choices=list(ENDPOINTS.keys()),
         required=True,
-        help="Un ou plusieurs endpoints à collecter",
+        help="One or more endpoints to collect",
     )
     parser.add_argument(
         "--delay",
         type=int,
         default=DEFAULT_DELAY_SECONDS,
-        help="Délai en secondes entre deux requêtes (par défaut 245s pour rester sous 15/h)",
+        help="Delay in seconds between two requests (default 245s to stay under 15/h)",
     )
     parser.add_argument(
         "--count-only",
         action="store_true",
-        help="Ne fait qu'une seule requête pour afficher le volume total disponible",
+        help="Make a single request just to display the total available volume",
     )
     args = parser.parse_args()
 
@@ -211,8 +215,8 @@ def main() -> None:
             collect_endpoint(endpoint_name, delay_seconds=args.delay, count_only=args.count_only)
     except (RuntimeError, KeyboardInterrupt) as exc:
         logger.warning(
-            "Arrêt du script (%s). Aucune donnée perdue : relance exactement la même "
-            "commande pour reprendre automatiquement là où tu t'es arrêté.",
+            "Script stopped (%s). No data lost: rerun the exact same command "
+            "to automatically resume where you left off.",
             exc.__class__.__name__,
         )
 
