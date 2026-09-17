@@ -11,6 +11,16 @@ Projet réalisé dans le cadre du cours **DALAS** (Data Science, Learning and Ap
 - **[Launch Library 2 API](https://ll.thespacedevs.com/)** — historique complet des lancements orbitaux (~6000 lancements), agences, sites de lancement, configurations de fusées
 - **Wikipédia** — enrichissement : coût par lancement (infobox des pages fusées), dates-repères (premiers atterrissages réussis, jalons technologiques)
 
+## Avancement
+
+- ✅ 01 — Collecte brute (API Launch Library 2) — 7977 lancements récupérés
+- ⬜ 02 — Fusion des sources (launches / agencies / pads / launcher_configs)
+- ⬜ 03 — Nettoyage
+- ⬜ 04 — Enrichissement externe (coûts, dates-repères)
+- ⬜ 05 — Calcul des métriques
+- ⬜ Dashboard (TME6)
+- ⬜ Rapport visuel + rapport technique (TME9)
+
 ## Pipeline de données
 
 | Étape | Script | Description |
@@ -52,4 +62,4 @@ python scripts/05_compute_metrics.py
 
 ## Auteur
 
-Klay — M2, projet individuel DALAS
+Karim, Projet de groupe DALAS TME
