@@ -25,9 +25,9 @@ Each step reads the output of the previous one and writes a new version — raw 
 
 ## Progress
 
-- ✅ 01 — Raw collection (Launch Library 2 API) — 7977 launches retrieved
-- ✅ 02 — Merging sources (launches / agencies / pads / launcher_configs) - 7977 rows, 0 missing matches
-- ⬜ 03 — Cleaning
+- ✅ 01 — Raw collection (Launch Library 2 API) - 7977 launches retrieved.
+- ✅ 02 — Merging sources (launches / agencies / pads / launcher_configs) - 7977 rows, 0 missing matches.
+- ✅ 03 — Cleaning - 7620 resolved launches kept, 357 pending excluded, 0 duplicates.
 - ⬜ 04 — External enrichment (costs, key milestone dates)
 - ⬜ 05 — Computing metrics
 - ⬜ Dashboard (TME6)
