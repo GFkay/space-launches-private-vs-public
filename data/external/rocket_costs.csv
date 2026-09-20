@@ -1,0 +1,21 @@
+launcher_family,cost_per_launch_usd,cost_year,cost_source_url,notes
+Soyuz,48500000,2018,https://en.wikipedia.org/wiki/Soyuz-2,Roscosmos domestic price (Soyuz-2.1b without Fregat); commercial Arianespace price was closer to $80M
+Falcon,67000000,2022,https://en.wikipedia.org/wiki/Falcon_9,Reusable flights historically cheaper (~$50-62M); expendable/current figure ~$67-74M
+Long March,50000000,,https://en.wikipedia.org/wiki/Long_March_3B,Varies by variant: 2D ~$30M 3B ~$50-70M; midpoint estimate used
+R-7,,,,No public cost data found - Cold War Soviet institutional/military program cost never disclosed
+Kosmos,,,,No public cost data found - Cold War Soviet institutional/military program cost never disclosed
+Atlas,110000000,2016,https://en.wikipedia.org/wiki/Atlas_V,Range $110-153M depending on number of solid boosters (0-5); base 401 configuration price used
+Proton / UR-500,65000000,,https://en.wikipedia.org/wiki/Proton-M,
+Thor,20000000,1985,https://orbitcodex.com/launch-vehicles/thor-agena-d,1985 dollars; range ~$10-22M depending on Agena upper stage variant
+Delta,137000000,2018,https://en.wikipedia.org/wiki/Delta_II,Final Delta II price before 2018 retirement; earlier flights ~$51M in 1987 dollars
+Ariane,180000000,2016,https://en.wikipedia.org/wiki/Ariane_5,Original figure EUR150-200M converted to USD at approx 1:1.1
+Tsiklon,,,,No public cost data found - Soviet/Ukrainian military-origin rocket
+Titan,43000000,1990,https://pages.uoregon.edu/stevev/sd-archive/sd-2002-4/msg00029.html,Commercial price for Titan II variant; larger Titan III/IV variants ranged $158-360M
+Vostok,,,,No public cost data found - Cold War Soviet institutional program cost never disclosed
+Scout,12000000,1990,https://pages.uoregon.edu/stevev/sd-archive/sd-2002-4/msg00029.html,
+Zenith,65000000,1990,https://pages.uoregon.edu/stevev/sd-archive/sd-2002-4/msg00029.html,
+H-II,110000000,1990,https://pages.uoregon.edu/stevev/sd-archive/sd-2002-4/msg00029.html,Historic H-2 figure; modern H-IIA/H3 cost is likely different
+PSLV,20000000,2023,https://en.wikipedia.org/wiki/Polar_Satellite_Launch_Vehicle,Range INR130-200 crore (~$16-24M)
+Pegasus,13500000,1990,https://pages.uoregon.edu/stevev/sd-archive/sd-2002-4/msg00029.html,
+Kuaizhou,6000000,2020,https://orbitcodex.com/launch-vehicles/kuaizhou-1a-2,
+Saturn,185000000,1970,https://en.wikipedia.org/wiki/Saturn_V,In 1969-1971 dollars; equivalent to roughly $1 billion+ in current dollars
